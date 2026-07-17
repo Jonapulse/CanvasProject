@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CanvasPhase3.CanvasPhase3.Entities;
+namespace CanvasPhase3.Entities;
 
 public partial class Assignmentsubmission
 {
@@ -11,7 +11,7 @@ public partial class Assignmentsubmission
 
     public string? Content { get; set; }
 
-    public string Studentid { get; set; } = null!;
+    public int Studentid { get; set; }
 
     public int Assignmentid { get; set; }
 

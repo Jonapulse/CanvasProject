@@ -1,4 +1,4 @@
-using CanvasPhase3.CanvasPhase3.Context;
+using CanvasPhase3.Context;
 using Microsoft.EntityFrameworkCore;
 using LMS.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -11,7 +11,7 @@ var connectionString = builder.Configuration.GetConnectionString("CanvasPhase3Co
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<MyDbContext>(options =>
+builder.Services.AddDbContext<LMSContext>(options =>
 {
     options.UseNpgsql(builder.Configuration["LMS:ConnectionString"]);
 });

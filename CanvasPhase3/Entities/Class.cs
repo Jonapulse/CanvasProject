@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CanvasPhase3.CanvasPhase3.Entities;
+namespace CanvasPhase3.Entities;
 
 public partial class Class
 {
@@ -19,7 +19,7 @@ public partial class Class
 
     public string Catalogid { get; set; } = null!;
 
-    public string? Profid { get; set; }
+    public int? Profid { get; set; }
 
     public virtual ICollection<Assignmentcategory> Assignmentcategories { get; set; } = new List<Assignmentcategory>();
 

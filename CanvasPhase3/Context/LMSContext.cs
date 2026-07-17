@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using CanvasPhase3.CanvasPhase3.Entities;
+using CanvasPhase3.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanvasPhase3.CanvasPhase3.Context;
+namespace CanvasPhase3.Context;
 
-public partial class MyDbContext : DbContext
+public partial class LMSContext : DbContext
 {
-    public MyDbContext()
+    public LMSContext()
     {
     }
 
-    public MyDbContext(DbContextOptions<MyDbContext> options)
+    public LMSContext(DbContextOptions<LMSContext> options)
         : base(options)
     {
     }
@@ -40,7 +40,7 @@ public partial class MyDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=atr.eng.utah.edu;Username=u1273673;Database=LMS5");
+        => optionsBuilder.UseNpgsql("Host=atr.eng.utah.edu;Database=LMS5;Username=u0294347;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,8 +51,13 @@ public partial class MyDbContext : DbContext
             entity.ToTable("administrators");
 
             entity.Property(e => e.Uid)
-                .HasMaxLength(8)
+                .ValueGeneratedNever()
                 .HasColumnName("uid");
+
+            entity.HasOne(d => d.UidNavigation).WithOne(p => p.Administrator)
+                .HasForeignKey<Administrator>(d => d.Uid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("administrators_uid_fkey");
         });
 
         modelBuilder.Entity<Assignment>(entity =>
@@ -117,9 +122,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Submissiontime)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("submissiontime");
-            entity.Property(e => e.Studentid)
-                .HasMaxLength(8)
-                .HasColumnName("studentid");
+            entity.Property(e => e.Studentid).HasColumnName("studentid");
             entity.Property(e => e.Assignmentid).HasColumnName("assignmentid");
             entity.Property(e => e.Content).HasColumnName("content");
             entity.Property(e => e.Score).HasColumnName("score");
@@ -154,9 +157,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Location)
                 .HasMaxLength(100)
                 .HasColumnName("location");
-            entity.Property(e => e.Profid)
-                .HasMaxLength(8)
-                .HasColumnName("profid");
+            entity.Property(e => e.Profid).HasColumnName("profid");
             entity.Property(e => e.Semesterterm)
                 .HasMaxLength(6)
                 .HasColumnName("semesterterm");
@@ -217,9 +218,7 @@ public partial class MyDbContext : DbContext
             entity.ToTable("enrollment");
 
             entity.Property(e => e.Classid).HasColumnName("classid");
-            entity.Property(e => e.Uid)
-                .HasMaxLength(8)
-                .HasColumnName("uid");
+            entity.Property(e => e.Uid).HasColumnName("uid");
             entity.Property(e => e.Grade)
                 .HasMaxLength(2)
                 .HasColumnName("grade");
@@ -243,13 +242,18 @@ public partial class MyDbContext : DbContext
             entity.ToTable("professors");
 
             entity.Property(e => e.Uid)
-                .HasMaxLength(8)
+                .ValueGeneratedNever()
                 .HasColumnName("uid");
             entity.Property(e => e.Employerdep).HasColumnName("employerdep");
 
             entity.HasOne(d => d.EmployerdepNavigation).WithMany(p => p.Professors)
                 .HasForeignKey(d => d.Employerdep)
                 .HasConstraintName("professors_employerdep_fkey");
+
+            entity.HasOne(d => d.UidNavigation).WithOne(p => p.Professor)
+                .HasForeignKey<Professor>(d => d.Uid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("professors_uid_fkey");
         });
 
         modelBuilder.Entity<Student>(entity =>
@@ -259,13 +263,18 @@ public partial class MyDbContext : DbContext
             entity.ToTable("students");
 
             entity.Property(e => e.Uid)
-                .HasMaxLength(8)
+                .ValueGeneratedNever()
                 .HasColumnName("uid");
             entity.Property(e => e.Majordep).HasColumnName("majordep");
 
             entity.HasOne(d => d.MajordepNavigation).WithMany(p => p.Students)
                 .HasForeignKey(d => d.Majordep)
                 .HasConstraintName("students_majordep_fkey");
+
+            entity.HasOne(d => d.UidNavigation).WithOne(p => p.Student)
+                .HasForeignKey<Student>(d => d.Uid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("students_uid_fkey");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -274,16 +283,14 @@ public partial class MyDbContext : DbContext
 
             entity.ToTable("users");
 
-            entity.Property(e => e.Uid)
-                .HasMaxLength(8)
-                .HasColumnName(" uid");
-            entity.Property(e => e.Dob).HasColumnName(" dob");
+            entity.Property(e => e.Uid).HasColumnName("uid");
+            entity.Property(e => e.Dob).HasColumnName("dob");
             entity.Property(e => e.Firstname)
                 .HasMaxLength(100)
-                .HasColumnName(" firstname");
+                .HasColumnName("firstname");
             entity.Property(e => e.Lastname)
                 .HasMaxLength(100)
-                .HasColumnName(" lastname");
+                .HasColumnName("lastname");
         });
 
         OnModelCreatingPartial(modelBuilder);

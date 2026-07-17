@@ -10,7 +10,9 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
-
+using CanvasPhase3.Context;
+using CanvasPhase3.Entities;
+using CanvasPhase3.Context;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -27,7 +29,8 @@ namespace CanvasPhase3.Areas.Identity.Pages.Account
         UserManager<IdentityUser> userManager,
         IUserStore<IdentityUser> userStore,
         SignInManager<IdentityUser> signInManager,
-        ILogger<RegisterModel> logger)
+        ILogger<RegisterModel> logger,
+        LMSContext myDbContext)
         : PageModel
     {
         //Use this if you're sending registration emails, which we're not
@@ -181,7 +184,21 @@ namespace CanvasPhase3.Areas.Identity.Pages.Account
         /// <param name="role"></param>
         string CreateNewUser(string firstName, string lastName, DateTime DOB, string departmentAbbrev, string role)
         {
-
+            ///*
+            User newUser = new User()
+            {
+                Firstname =  firstName,
+                Lastname = lastName,
+                Dob = DateOnly.FromDateTime(DOB)
+            };
+            myDbContext.Users.Add(newUser);
+            myDbContext.SaveChanges(); //TODO: does this need to be async?
+            
+             //   */
+            //Then update students, professors, or admin based on role
+            
+            //Then return the ID (use your chess logic)
+            
             //TODO FILL ME IN
             return "ASDF";
         }

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CanvasPhase3.CanvasPhase3.Entities;
+namespace CanvasPhase3.Entities;
 
 public partial class Enrollment
 {
     public int Classid { get; set; }
 
-    public string Uid { get; set; } = null!;
+    public int Uid { get; set; }
 
     public string? Grade { get; set; }
 

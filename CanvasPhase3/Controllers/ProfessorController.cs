@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using CanvasPhase3.Context;
+using CanvasPhase3.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +12,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LMS.Controllers
 {
-    //TODO: add your controller as a "primary constructor" param:
-    //eg: public class ProfessorController(MyContextType myContext) 
     [Authorize(Roles = "Professor")]
-    public class ProfessorController : Controller
+    public class ProfessorController(LMSContext myDbContext): Controller
     {
 
         public IActionResult Index()
