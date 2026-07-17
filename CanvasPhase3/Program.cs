@@ -16,8 +16,6 @@ builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseNpgsql(builder.Configuration["LMS:ConnectionString"]);
 });
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<IdentityContext>();
-
 builder.Services.AddDbContext<IdentityContext>(options =>
 {
     options.UseNpgsql(builder.Configuration["LMS:IdentityConnectionString"]);
