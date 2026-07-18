@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Entities;
 using CanvasPhase3.Context;
+using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -192,15 +193,48 @@ namespace CanvasPhase3.Areas.Identity.Pages.Account
                 Dob = DateOnly.FromDateTime(DOB)
             };
             myDbContext.Users.Add(newUser);
-            myDbContext.SaveChanges(); //TODO: does this need to be async?
+            myDbContext.SaveChanges();
             
-             //   */
-            //Then update students, professors, or admin based on role
+            switch (role)
+            {
+                case "Student":
+                {
+                    var department = myDbContext.Departments.FirstOrDefault(d => d.Subjabbrv == departmentAbbrev);
+                    if (department == null)
+                        logger.LogWarning("New student department not found, registered with Null department");
+                    Student newStudent = new Student()
+                    {
+                        Majordep = department?.Depid,
+                        Uid = newUser.Uid
+                    };
+                    myDbContext.Students.Add(newStudent);
+                    myDbContext.SaveChanges();
+                }
+                    break;
+                case "Professor":
+                {
+                    var department = myDbContext.Departments.FirstOrDefault(d => d.Subjabbrv == departmentAbbrev);
+                    if (department == null)
+                        logger.LogWarning("New professor department not found, registered with Null department");
+                    Professor newProfessor = new Professor()
+                    {
+                        Employerdep = department?.Depid,
+                        Uid = newUser.Uid
+                    };
+                    myDbContext.Professors.Add(newProfessor);
+                    myDbContext.SaveChanges();
+                }
+                    break;
+                case "Administrator":
+                    myDbContext.Administrators.Add(new Administrator()
+                    {
+                        Uid = newUser.Uid
+                    });
+                    myDbContext.SaveChanges();
+                    break;
+            }
             
-            //Then return the ID (use your chess logic)
-            
-            //TODO FILL ME IN
-            return "ASDF";
+            return newUser.Uid.ToDisplayId();
         }
 
         /*******End code to modify********/
