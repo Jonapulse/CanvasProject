@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
+using CanvasPhase3.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -45,8 +46,14 @@ namespace LMS.Controllers
         /// false if the department already exists, true otherwise.</returns>
         public IActionResult CreateDepartment(string subject, string name)
         {
-            
-            return Json(new { success = false});
+            Department newDept = new Department()
+            {
+                Subjabbrv = subject,
+                Name = name
+            };
+            myDbContext.Departments.Add(newDept);
+            int entriesWritten = myDbContext.SaveChanges();
+            return Json(new { success = entriesWritten > 0});
         }
 
 

@@ -1,11 +1,14 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
+using CanvasPhase3.Entities;
 using Microsoft.AspNetCore.Mvc;
+using NuGet.Protocol;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -25,8 +28,14 @@ namespace LMS.Controllers
         /// </summary>
         /// <returns>The JSON array</returns>
         public IActionResult GetDepartments()
-        {            
-            return Json(null);
+        {
+            var depts = myDbContext.Departments.Select(d => new
+            {
+                name = d.Name,
+                subject = d.Subjabbrv
+            }).ToList();
+            
+            return Json(depts);
         }
 
 
