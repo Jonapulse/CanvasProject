@@ -8,5 +8,10 @@ namespace CanvasPhase3.Utilities
             // e.g. 1042 -> "u0001042"
             return "u" + uid.ToString("D7");
         }
+
+        public static int FromDisplayId(this string uid)
+        {
+            return int.Parse(uid.Substring(1));
+        }
     }
 }
