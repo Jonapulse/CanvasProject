@@ -129,7 +129,7 @@ namespace CanvasPhase3.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 var uid = CreateNewUser(Input.FirstName, Input.LastName, Input.DOB, Input.Department, Input.Role);
-                var user = new IdentityUser { Email = uid  + "@utah.edu"};
+                var user = new IdentityUser { Email = uid + "utah.edu"};
 
                 await userStore.SetUserNameAsync(user, uid, CancellationToken.None);
                 var result = await userManager.CreateAsync(user, Input.Password);

@@ -13,5 +13,11 @@ namespace CanvasPhase3.Utilities
         {
             return int.Parse(uid.Substring(1));
         }
+
+        public static string FromEmailToUsername(this string email)
+        {
+            return email.Split('@')[0];
+        }
+        
     }
 }
