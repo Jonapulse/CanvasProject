@@ -2,7 +2,7 @@ using System.Diagnostics;
 using CanvasPhase3.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LMS.Controllers;
+namespace CanvasPhase3.Controllers;
 
 public class HomeController: Controller
 {

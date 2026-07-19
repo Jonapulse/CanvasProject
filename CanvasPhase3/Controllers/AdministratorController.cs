@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace LMS.Controllers
+namespace CanvasPhase3.Controllers
 {
     public class AdministratorController(LMSContext myDbContext) : Controller
     {
@@ -38,7 +38,7 @@ namespace LMS.Controllers
         /*******Begin code to modify********/
 
         /// <summary>
-        /// Create a department which is uniquely identified by it's subject code
+        /// Create a department which is uniquely identified by its subject code
         /// </summary>
         /// <param name="subject">the subject code</param>
         /// <param name="name">the full name of the department</param>
@@ -46,6 +46,15 @@ namespace LMS.Controllers
         /// false if the department already exists, true otherwise.</returns>
         public IActionResult CreateDepartment(string subject, string name)
         {
+            // Check if department already exists
+            bool exists = myDbContext.Departments.Any(d => d.Subjabbrv == subject && d.Name == name);
+
+            if (exists)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Create department
             Department newDept = new Department()
             {
                 Subjabbrv = subject,
@@ -63,12 +72,17 @@ namespace LMS.Controllers
         /// "number" - The course number (as in 5530)
         /// "name" - The course name (as in "Database Systems")
         /// </summary>
-        /// <param name="subjCode">The department subject abbreviation (as in "CS")</param>
+        /// <param name="subject">The department subject abbreviation (as in "CS")</param>
         /// <returns>The JSON result</returns>
         public IActionResult GetCourses(string subject)
         {
+            var courses = myDbContext.Courses.Where(c => c.Dep != null && c.Dep.Subjabbrv == subject).Select(c => new
+            {
+                number = c.Number,
+                name = c.Name,
+            }).ToList();
             
-            return Json(null);
+            return Json(courses);
         }
 
         /// <summary>
@@ -82,9 +96,15 @@ namespace LMS.Controllers
         /// <returns>The JSON result</returns>
         public IActionResult GetProfessors(string subject)
         {
+            var prof = myDbContext.Professors.Where(p => p.EmployerdepNavigation != null && p.EmployerdepNavigation.Subjabbrv == subject)
+                .Select(p => new
+            {
+                lname = p.UidNavigation.Lastname,
+                fname = p.UidNavigation.Firstname,
+                uid = p.Uid
+            }).ToList();
             
-            return Json(null);
-            
+            return Json(prof);
         }
 
 
@@ -99,8 +119,35 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing {success = true/false}.
         /// false if the course already exists, true otherwise.</returns>
         public IActionResult CreateCourse(string subject, int number, string name)
-        {           
-            return Json(new { success = false });
+        {
+            // Find the department
+            var dept = myDbContext.Departments.FirstOrDefault(d => d.Subjabbrv == subject);
+
+            if (dept == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Check if the course already exists
+            bool exists = myDbContext.Courses.Any(c => c.Number == number && c.Depid == dept.Depid);
+            
+            if (exists)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Create course
+            Course newCourse = new Course()
+            {
+                Depid = dept.Depid,
+                Number = (short) number,
+                Name = name
+            };
+            
+            myDbContext.Courses.Add(newCourse);
+            int entriesWritten = myDbContext.SaveChanges();
+            
+            return Json(new { success = entriesWritten > 0 });
         }
 
 
@@ -122,8 +169,55 @@ namespace LMS.Controllers
         /// a Class offering of the same Course in the same Semester,
         /// true otherwise.</returns>
         public IActionResult CreateClass(string subject, int number, string season, int year, DateTime start, DateTime end, string location, string instructor)
-        {            
-            return Json(new { success = false});
+        {           
+            // Find the course
+            var course = myDbContext.Courses.FirstOrDefault(c => c.Dep != null && c.Dep.Subjabbrv == subject && c.Number == number);
+
+            if (course == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Check if class already exists
+            bool exists = myDbContext.Classes.Any(c => c.Catalogid == course.Catalogid && c.Semesterterm == season && c.Semesteryear == year);
+            
+            if (exists)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Check if another class occupies the same location during this time 
+            TimeOnly starttime = TimeOnly.FromDateTime(start);
+            TimeOnly endtime = TimeOnly.FromDateTime(end);
+            
+            bool roomConflict = myDbContext.Classes.Any(c => 
+                c.Location == location && 
+                c.Semesterterm == season && 
+                c.Semesteryear == year && 
+                starttime < c.Endtime &&
+                endtime > c.Starttime);
+
+            if (roomConflict)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Create class
+            Class newClass = new Class()
+            {
+                Catalogid = course.Catalogid,
+                Semesterterm = season,
+                Semesteryear = (short) year,
+                Location = location,
+                Starttime = starttime,
+                Endtime = endtime,
+                Profid = int.Parse(instructor)
+            };
+            
+            myDbContext.Classes.Add(newClass);
+            int entriesWritten = myDbContext.SaveChanges();
+            
+            return Json(new { success = entriesWritten > 0 });
         }
 
 

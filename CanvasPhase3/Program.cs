@@ -1,6 +1,6 @@
 using CanvasPhase3.Context;
 using Microsoft.EntityFrameworkCore;
-using LMS.Authorization;
+using CanvasPhase3.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using CanvasPhase3.Areas.Identity.Data;
