@@ -246,9 +246,6 @@ namespace CanvasPhase3.Controllers
         {            
             return Json(null);
         }
-
-
-        
         /*******End code to modify********/
     }
 }
