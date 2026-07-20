@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
+using CanvasPhase3.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,7 +72,19 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
         {           
-            return Json(null);
+            int studentUid = int.Parse(uid);
+            
+            var classes = myDbContext.Enrollments.Where(e => e.Uid == studentUid ).Select(e => new
+            {
+                subject = e.Class.Catalog.Dep.Subjabbrv,
+                number = e.Class.Catalog.Number,
+                name = e.Class.Catalog.Name,
+                season = e.Class.Semesterterm,
+                year = e.Class.Semesteryear,
+                grade = e.Grade ?? "--"
+            }).ToList();
+            
+            return Json(classes);
         }
 
         /// <summary>
@@ -90,7 +103,20 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInClass(string subject, int num, string season, int year, string uid)
         {            
-            return Json(null);
+            int studentUid = int.Parse(uid);
+
+            var assignments = myDbContext.Assignments.Where(a 
+                => a.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Category.Class.Catalog.Number == num &&
+                   a.Category.Class.Semesterterm == season && a.Category.Class.Semesteryear == year).Select(a => new
+            {
+                aname = a.Name,
+                cname = a.Category.Name,
+                due = a.Duedate,
+                score = a.Assignmentsubmissions.Where(s => s.Student.Uid == studentUid)
+                    .Select(s => s.Score).FirstOrDefault()
+            }).ToList();
+            
+            return Json(assignments);
         }
 
 
@@ -115,7 +141,46 @@ namespace CanvasPhase3.Controllers
         public IActionResult SubmitAssignmentText(string subject, int num, string season, int year,
           string category, string asgname, string uid, string contents)
         {           
-            return Json(new { success = false });
+            int studentUid = int.Parse(uid);
+            
+            // Find the assignment
+            var assignment = myDbContext.Assignments.FirstOrDefault(a => 
+                a.Name == asgname && a.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Category.Class.Catalog.Number == num &&
+                a.Category.Class.Semesterterm == season && a.Category.Class.Semesteryear == year &&
+                a.Category.Name == category);
+
+            if (assignment == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Check if it's already been submitted
+            var submission = myDbContext.Assignmentsubmissions.FirstOrDefault(s => s.Student.Uid == studentUid &&
+                s.Assignmentid == assignment.Assignmentid);
+
+            if (submission == null)
+            {
+                // Create new submission
+                submission = new Assignmentsubmission
+                {
+                    Assignmentid = assignment.Assignmentid,
+                    Studentid = studentUid,
+                    Content = contents,
+                    Submissiontime = DateTime.Now,
+                    Score = 0
+                };
+                
+                myDbContext.Assignmentsubmissions.Add(submission);
+            }
+            else
+            {
+                // Replace contents and submission time
+                submission.Content = contents;
+                submission.Submissiontime = DateTime.Now;
+            }
+            
+            int entriesWritten = myDbContext.SaveChanges();
+            return Json(new { success = entriesWritten > 0 });
         }
 
 
@@ -131,7 +196,35 @@ namespace CanvasPhase3.Controllers
         /// false if the student is already enrolled in the class, true otherwise.</returns>
         public IActionResult Enroll(string subject, int num, string season, int year, string uid)
         {          
-            return Json(new { success = false});
+            int  studentUid = int.Parse(uid);
+            
+            // Get class to enroll in
+            var classToEnroll = myDbContext.Classes.FirstOrDefault(c => c.Catalog.Dep.Subjabbrv == subject && 
+                c.Catalog.Number == num && c.Semesterterm == season && c.Semesteryear == year);
+
+            if (classToEnroll == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Check if student is already enrolled
+            bool alreadyEnrolled = myDbContext.Enrollments.Any(e => e.Classid == classToEnroll.Classid && e.Uid == studentUid);
+
+            if (alreadyEnrolled)
+            {
+                return Json(new { success = false });
+            }
+            
+            // Enroll student
+            myDbContext.Enrollments.Add(new Enrollment
+            {
+                Classid = classToEnroll.Classid,
+                Uid = studentUid,
+                Grade = null
+            });
+            
+            int entriesWritten = myDbContext.SaveChanges();
+            return Json(new { success = entriesWritten > 0 });
         }
 
 
@@ -149,7 +242,37 @@ namespace CanvasPhase3.Controllers
         /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
         public IActionResult GetGPA(string uid)
         {            
-            return Json(null);
+            int studentUid = int.Parse(uid);
+
+            // Get list of grades
+            var grades = myDbContext.Enrollments.Where(e => e.Uid == studentUid && e.Grade != null && e.Grade != "--")
+                .Select(e => e.Grade).ToList();
+
+            if (grades.Count == 0)
+            {
+                return Json(new { gpa = 0.0 });
+            }
+            
+            var gradePoints = new Dictionary<string, double>()
+            {
+                ["A"] = 4.0,
+                ["A-"] = 3.7,
+                ["B+"] = 3.3,
+                ["B"] = 3.0,
+                ["B-"] = 2.7,
+                ["C+"] = 2.3,
+                ["C"] = 2.0,
+                ["C-"] = 1.7,
+                ["D+"] = 1.3,
+                ["D"] = 1.0,
+                ["D-"] = 0.7,
+                ["E"] = 0.0
+            };
+            
+            double total = grades.Sum(g => gradePoints[g]);
+            double gpa = total / grades.Count;
+            
+            return Json(new {gpa});
         }
                 
         /*******End code to modify********/
