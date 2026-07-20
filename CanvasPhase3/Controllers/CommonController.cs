@@ -2,11 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
 using CanvasPhase3.Entities;
+using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using NuGet.Protocol;
 
@@ -53,7 +55,18 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetCatalog()
         {            
-            return Json(null);
+            var courses = myDbContext.Departments.Select(d => new
+            {
+                subject = d.Subjabbrv,
+                dname = d.Name,
+                courses = d.Courses.Select(c => new 
+                {
+                    number = c.Number,
+                    cname = c.Name,
+                })
+            }).ToList();
+            
+            return Json(courses);
         }
 
         /// <summary>
@@ -72,7 +85,18 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetClassOfferings(string subject, int number)
         {            
-            return Json(null);
+            var classOfferings = myDbContext.Classes.Where(c =>
+                c.Catalog.Number == number && c.Catalog.Dep.Subjabbrv == subject).Select(c => new
+            {
+                season = c.Semesterterm,
+                year = c.Semesteryear,
+                location = c.Location,
+                start = c.Starttime,
+                end = c.Endtime,
+                fname = c.Prof.UidNavigation.Firstname,
+                lname = c.Prof.UidNavigation.Lastname
+            });
+            return Json(classOfferings);
         }
 
         /// <summary>
@@ -88,8 +112,12 @@ namespace CanvasPhase3.Controllers
         /// <param name="asgname">The name of the assignment in the category</param>
         /// <returns>The assignment contents</returns>
         public IActionResult GetAssignmentContents(string subject, int num, string season, int year, string category, string asgname)
-        {            
-            return Content("");
+        {
+            string content = myDbContext.Assignments.Where(a =>
+                a.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Category.Class.Catalog.Number == num &&
+                a.Category.Class.Semesterterm == season && a.Category.Class.Semesteryear == year &&
+                a.Category.Name == category && a.Name == asgname).Select(a => a.Content).First().ToString();
+            return Content(content);
         }
 
 
@@ -109,7 +137,12 @@ namespace CanvasPhase3.Controllers
         /// <returns>The submission text</returns>
         public IActionResult GetSubmissionText(string subject, int num, string season, int year, string category, string asgname, string uid)
         {            
-            return Content("");
+            string submission = myDbContext.Assignmentsubmissions.Where(a =>
+                a.Studentid == uid.FromDisplayId() &&
+                a.Assignment.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Assignment.Category.Class.Catalog.Number == num &&
+                a.Assignment.Category.Class.Semesterterm == season && a.Assignment.Category.Class.Semesteryear == year &&
+                a.Assignment.Category.Name == category && a.Assignment.Name == asgname).Select(a => a.Content).First().ToString();
+            return Content(submission);
         }
 
 
@@ -130,8 +163,42 @@ namespace CanvasPhase3.Controllers
         /// or an object containing {success: false} if the user doesn't exist
         /// </returns>
         public IActionResult GetUser(string uid)
-        {           
-            return Json(new { success = false });
+        {
+            var user = myDbContext.Users.FirstOrDefault(u => u.Uid == uid.FromDisplayId());
+            if (user == null)
+            {
+                return Json(new { success = false });
+            }
+
+            string departmentName = null;
+            if (user.Student != null)
+            {
+                departmentName = user.Student.MajordepNavigation.Name;
+            }
+            else if (user.Professor != null)
+            {
+                departmentName = user.Professor.EmployerdepNavigation.Name; 
+            }
+
+            if (departmentName != null)
+            {
+                return Json(new
+                {
+                    fname = user.Firstname,
+                    lname = user.Lastname,
+                    uid = user.Uid.ToDisplayId(),
+                    department = departmentName
+                });
+            }
+            else
+            {
+                return Json(new
+                {
+                    fname = user.Firstname,
+                    lname = user.Lastname,
+                    uid = user.Uid.ToDisplayId()
+                });
+            }
         }
 
 
