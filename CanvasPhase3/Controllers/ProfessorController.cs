@@ -5,8 +5,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
+using CanvasPhase3.Entities;
+using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -111,7 +114,18 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetStudentsInClass(string subject, int num, string season, int year)
         {
-            return Json(null);
+            var students = myDbContext.Enrollments.Where(e =>
+                e.Class.Catalog.Number == num && e.Class.Catalog.Dep != null && e.Class.Catalog.Dep.Subjabbrv == subject &&
+                e.Class.Semesterterm == season && e.Class.Semesteryear == year).Select(e => new
+            {
+                fname = e.UidNavigation.UidNavigation.Lastname,
+                lname = e.UidNavigation.UidNavigation.Firstname,
+                uid = e.Uid,
+                dob = e.UidNavigation.UidNavigation.Dob,
+                grade = e.Grade
+            }).ToList();
+            
+            return Json(students);
         }
 
 
@@ -134,7 +148,18 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInCategory(string subject, int num, string season, int year, string category)
         {
-            return Json(null);
+            var assignments = myDbContext.Assignments.Where(a =>
+                a.Category.Name == category && a.Category.Class.Semesterterm == season && 
+                a.Category.Class.Semesteryear == year && a.Category.Class.Catalog.Number == num && 
+                a.Category.Class.Catalog.Dep != null && a.Category.Class.Catalog.Dep.Subjabbrv == subject).Select(a => new
+            {
+                aname = a.Name,
+                cname = a.Category.Name,
+                due = a.Duedate,
+                Submissions = a.Assignmentsubmissions.Count
+            }).ToList();
+            
+            return Json(assignments);
         }
 
 
@@ -152,7 +177,15 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentCategories(string subject, int num, string season, int year)
         {
-            return Json(null);
+            var categories = myDbContext.Assignmentcategories.Where(c =>
+                c.Class.Semesterterm == season && c.Class.Semesteryear == year && c.Class.Catalog.Number == num &&
+                c.Class.Catalog.Dep != null && c.Class.Catalog.Dep.Subjabbrv == subject).Select(c => new
+            {
+                name = c.Name,
+                weight = c.Gradingweight
+            }).ToList();
+            
+            return Json(categories);
         }
 
         /// <summary>
@@ -168,7 +201,27 @@ namespace CanvasPhase3.Controllers
         /// <returns>A JSON object containing {success = true/false} </returns>
         public IActionResult CreateAssignmentCategory(string subject, int num, string season, int year, string category, int catweight)
         {
-            return Json(new { success = false });
+            //Lookup the class
+            var classForCategory = myDbContext.Classes.FirstOrDefault(c =>
+                c.Semesterterm == season && c.Semesteryear == year && c.Catalog.Number == num &&
+                c.Catalog.Dep != null && c.Catalog.Dep.Subjabbrv == subject);
+            
+            //If it doesn't exist or that category name already exists for this class, abort
+            if (classForCategory == null || myDbContext.Assignmentcategories.Any(c => 
+                    c.Classid == classForCategory.Classid && c.Name == category))
+            {
+                return Json(new { success = false });
+            }
+
+            Assignmentcategory newCat = new Assignmentcategory()
+            {
+                Name = category,
+                Gradingweight = (short)catweight,
+                Classid = classForCategory.Classid
+            };
+            myDbContext.Assignmentcategories.Add(newCat);
+            int entriesWritten = myDbContext.SaveChanges();
+            return Json(new { success = entriesWritten > 0 });
         }
 
         /// <summary>
@@ -186,7 +239,30 @@ namespace CanvasPhase3.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult CreateAssignment(string subject, int num, string season, int year, string category, string asgname, int asgpoints, DateTime asgdue, string asgcontents)
         {
-            return Json(new { success = false });
+            
+            //Find the category
+            var categoryForAssignment = myDbContext.Assignmentcategories.FirstOrDefault(c =>
+                c.Name == category && c.Class.Semesterterm == season && c.Class.Semesteryear == year
+                && c.Class.Catalog.Number == num && c.Class.Catalog.Dep != null &&
+                c.Class.Catalog.Dep.Subjabbrv == subject);
+
+            if (categoryForAssignment == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            Assignment assignment = new Assignment()
+            {
+                Categoryid =  categoryForAssignment.Classid,
+                Name = asgname,
+                Maxscore = asgpoints,
+                Duedate = asgdue,
+                Content = asgcontents
+            };
+            
+            myDbContext.Assignments.Add(assignment);
+            int entriesWritten = myDbContext.SaveChanges();
+            return Json(new { success = entriesWritten > 0 });
         }
 
 
@@ -209,7 +285,35 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetSubmissionsToAssignment(string subject, int num, string season, int year, string category, string asgname)
         {
-            return Json(null);
+            //Find the category
+            var categoryForAssignment = myDbContext.Assignmentcategories.FirstOrDefault(c =>
+                c.Name == category && c.Class.Semesterterm == season && c.Class.Semesteryear == year
+                && c.Class.Catalog.Number == num && c.Class.Catalog.Dep != null &&
+                c.Class.Catalog.Dep.Subjabbrv == subject);
+
+            if (categoryForAssignment == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            //Find the assignment
+            var assignment = myDbContext.Assignments.FirstOrDefault(c => c.Categoryid == categoryForAssignment.Classid);
+            if (assignment == null)
+            {
+                return Json(new { success = false });
+            }
+
+            var submissions = myDbContext.Assignmentsubmissions.Where(c => c.Assignmentid == assignment.Assignmentid)
+                .Select(a => new
+                {
+                    fname = a.Student.UidNavigation.Firstname,
+                    lname = a.Student.UidNavigation.Lastname,
+                    uid = a.Studentid,
+                    time = a.Submissiontime,
+                    score = a.Score
+                }).ToList();
+                
+            return Json(submissions);
         }
 
 
@@ -227,7 +331,32 @@ namespace CanvasPhase3.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
         {
-            return Json(new { success = false });
+            //Find the assignment
+            var assignment = myDbContext.Assignments.FirstOrDefault(c =>
+                c.Category.Class.Catalog.Dep.Subjabbrv == subject && c.Category.Class.Catalog.Number == num && 
+                c.Category.Class.Semesterterm == season && c.Category.Class.Semesteryear == year &&
+                c.Name == asgname);
+
+            if (assignment == null)
+            {
+                return Json(new { success = false });
+            }
+            
+            var submission = myDbContext.Assignmentsubmissions.Where(c =>
+                c.Studentid == uid.FromDisplayId() && c.Assignmentid == assignment.Assignmentid)
+                .OrderByDescending(c => c.Submissiontime).FirstOrDefault();
+            
+            if (submission == null)
+            {
+                return Json(new { success = false });
+            }
+            else
+            {
+                submission.Score = score;
+                myDbContext.Assignmentsubmissions.Update(submission);
+                int entriesWritten = myDbContext.SaveChanges();
+                return Json(new { success = entriesWritten > 0 });
+            }
         }
 
 
@@ -243,8 +372,17 @@ namespace CanvasPhase3.Controllers
         /// <param name="uid">The professor's uid</param>
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
-        {            
-            return Json(null);
+        {          
+            var myClasses = myDbContext.Classes.Where(c => c.Profid == uid.FromDisplayId()).Select(c => new
+            {
+                subject = c.Catalog.Dep.Subjabbrv,
+                number = c.Catalog.Number,
+                name = c.Catalog.Name,
+                season = c.Semesterterm,
+                year = c.Semesteryear
+            }).ToList();
+            
+            return Json(myClasses);
         }
         /*******End code to modify********/
     }
