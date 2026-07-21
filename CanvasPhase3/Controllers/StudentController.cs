@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
 using CanvasPhase3.Entities;
+using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,8 +72,8 @@ namespace CanvasPhase3.Controllers
         /// <param name="uid">The uid of the student</param>
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
-        {           
-            int studentUid = int.Parse(uid);
+        {
+            int studentUid = uid.FromDisplayId();
             
             var classes = myDbContext.Enrollments.Where(e => e.Uid == studentUid ).Select(e => new
             {
@@ -241,8 +242,8 @@ namespace CanvasPhase3.Controllers
         /// <param name="uid">The uid of the student</param>
         /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
         public IActionResult GetGPA(string uid)
-        {            
-            int studentUid = int.Parse(uid);
+        {
+            int studentUid = uid.FromDisplayId();
 
             // Get list of grades
             var grades = myDbContext.Enrollments.Where(e => e.Uid == studentUid && e.Grade != null && e.Grade != "--")

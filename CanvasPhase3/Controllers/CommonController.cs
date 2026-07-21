@@ -10,6 +10,7 @@ using CanvasPhase3.Context;
 using CanvasPhase3.Entities;
 using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NuGet.Protocol;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -164,7 +165,11 @@ namespace CanvasPhase3.Controllers
         /// </returns>
         public IActionResult GetUser(string uid)
         {
-            var user = myDbContext.Users.FirstOrDefault(u => u.Uid == uid.FromDisplayId());
+            int internalID = uid.FromDisplayId();
+            var user = myDbContext.Users
+                .Include(u => u.Student).ThenInclude(s => s.MajordepNavigation)
+                .Include(u => u.Professor).ThenInclude(p => p.EmployerdepNavigation)
+                .FirstOrDefault(u => u.Uid == internalID);
             if (user == null)
             {
                 return Json(new { success = false });
@@ -173,11 +178,11 @@ namespace CanvasPhase3.Controllers
             string departmentName = null;
             if (user.Student != null)
             {
-                departmentName = user.Student.MajordepNavigation.Name;
+                departmentName = user.Student.MajordepNavigation?.Name;
             }
-            else if (user.Professor != null)
+            if (user.Professor != null)
             {
-                departmentName = user.Professor.EmployerdepNavigation.Name; 
+                departmentName = user.Professor.EmployerdepNavigation?.Name; 
             }
 
             if (departmentName != null)
