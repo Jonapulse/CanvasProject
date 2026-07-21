@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CanvasPhase3.Context;
 using CanvasPhase3.Context;
 using CanvasPhase3.Entities;
+using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -214,7 +215,7 @@ namespace CanvasPhase3.Controllers
                 Location = location,
                 Starttime = starttime,
                 Endtime = endtime,
-                Profid = int.Parse(instructor)
+                Profid = instructor.FromDisplayId()
             };
             
             myDbContext.Classes.Add(newClass);

@@ -104,7 +104,7 @@ namespace CanvasPhase3.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInClass(string subject, int num, string season, int year, string uid)
         {            
-            int studentUid = int.Parse(uid);
+            int studentUid = uid.FromDisplayId();
 
             var assignments = myDbContext.Assignments.Where(a 
                 => a.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Category.Class.Catalog.Number == num &&
@@ -142,7 +142,7 @@ namespace CanvasPhase3.Controllers
         public IActionResult SubmitAssignmentText(string subject, int num, string season, int year,
           string category, string asgname, string uid, string contents)
         {           
-            int studentUid = int.Parse(uid);
+            int studentUid = uid.FromDisplayId();
             
             // Find the assignment
             var assignment = myDbContext.Assignments.FirstOrDefault(a => 
@@ -197,7 +197,7 @@ namespace CanvasPhase3.Controllers
         /// false if the student is already enrolled in the class, true otherwise.</returns>
         public IActionResult Enroll(string subject, int num, string season, int year, string uid)
         {          
-            int  studentUid = int.Parse(uid);
+            int  studentUid = uid.FromDisplayId();
             
             // Get class to enroll in
             var classToEnroll = myDbContext.Classes.FirstOrDefault(c => c.Catalog.Dep.Subjabbrv == subject && 
