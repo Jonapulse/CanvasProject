@@ -297,7 +297,7 @@ namespace CanvasPhase3.Controllers
             }
             
             //Find the assignment
-            var assignment = myDbContext.Assignments.FirstOrDefault(c => c.Categoryid == categoryForAssignment.Classid);
+            var assignment = myDbContext.Assignments.FirstOrDefault(c => c.Categoryid == categoryForAssignment.Classid && c.Name == asgname);
             if (assignment == null)
             {
                 return Json(new { success = false });

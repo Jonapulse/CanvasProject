@@ -123,6 +123,8 @@ namespace CanvasPhase3.Controllers
             // Find the department
             var dept = myDbContext.Departments.FirstOrDefault(d => d.Subjabbrv == subject);
 
+            Console.WriteLine("CreateCourse called");
+            
             if (dept == null)
             {
                 return Json(new { success = false });
@@ -139,6 +141,7 @@ namespace CanvasPhase3.Controllers
             // Create course
             Course newCourse = new Course()
             {
+                Catalogid = subject + number,
                 Depid = dept.Depid,
                 Number = (short) number,
                 Name = name
