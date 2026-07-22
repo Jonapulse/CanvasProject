@@ -253,7 +253,7 @@ namespace CanvasPhase3.Controllers
             
             Assignment assignment = new Assignment()
             {
-                Categoryid =  categoryForAssignment.Classid,
+                Categoryid =  categoryForAssignment.Categoryid,
                 Name = asgname,
                 Maxscore = asgpoints,
                 Duedate = asgdue,
@@ -262,6 +262,18 @@ namespace CanvasPhase3.Controllers
             
             myDbContext.Assignments.Add(assignment);
             int entriesWritten = myDbContext.SaveChanges();
+            
+            // Recalculate grades for every enrolled student
+            var studentIds = myDbContext.Enrollments
+                .Where(e => e.Classid == categoryForAssignment.Classid)
+                .Select(e => e.Uid)
+                .ToList();
+
+            foreach (var studentId in studentIds)
+            {
+                CalcLetterGrade(categoryForAssignment.Classid, studentId);
+            }
+            
             return Json(new { success = entriesWritten > 0 });
         }
 
@@ -326,7 +338,7 @@ namespace CanvasPhase3.Controllers
         /// <param name="year">The year part of the semester for the class the assignment belongs to</param>
         /// <param name="category">The name of the assignment category in the class</param>
         /// <param name="asgname">The name of the assignment</param>
-        /// <param name="uid">The uid of the student who's submission is being graded</param>
+        /// <param name="uid">The uid of the student whose submission is being graded</param>
         /// <param name="score">The new score for the submission</param>
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
@@ -335,7 +347,7 @@ namespace CanvasPhase3.Controllers
             var assignment = myDbContext.Assignments.FirstOrDefault(c =>
                 c.Category.Class.Catalog.Dep.Subjabbrv == subject && c.Category.Class.Catalog.Number == num && 
                 c.Category.Class.Semesterterm == season && c.Category.Class.Semesteryear == year &&
-                c.Name == asgname);
+                c.Name == asgname && c.Category.Name == category);
 
             if (assignment == null)
             {
@@ -355,6 +367,10 @@ namespace CanvasPhase3.Controllers
                 submission.Score = score;
                 myDbContext.Assignmentsubmissions.Update(submission);
                 int entriesWritten = myDbContext.SaveChanges();
+                
+                // Calculate the student's letter grade
+                CalcLetterGrade(assignment.Category.Classid, submission.Studentid);
+                
                 return Json(new { success = entriesWritten > 0 });
             }
         }
@@ -385,5 +401,82 @@ namespace CanvasPhase3.Controllers
             return Json(myClasses);
         }
         /*******End code to modify********/
+
+        private void CalcLetterGrade(int classId, int studentId)
+        {
+            // Find the enrollment
+            var enrollment = myDbContext.Enrollments.FirstOrDefault(e =>
+                e.Classid == classId &&
+                e.Uid == studentId);
+
+            if (enrollment == null)
+                return;
+            
+            // Get all categories for the class
+            var categories = myDbContext.Assignmentcategories.Where(c => c.Classid == classId).ToList();
+
+            double weightedTotal = 0.0;
+            double totalWeights = 0.0;
+
+            foreach (var c in categories)
+            {
+                // Get assignments in the category
+                var assignments = myDbContext.Assignments.Where(a => a.Categoryid == c.Categoryid).ToList();
+                
+                // Ignore empty categories
+                if (assignments.Count == 0)
+                    continue;
+
+                double earnedPoints = 0.0;
+                double possiblePoints = 0.0;
+
+                foreach (var a in assignments)
+                {
+                    possiblePoints += a.Maxscore ?? 0;
+                    
+                    var submission = myDbContext.Assignmentsubmissions.FirstOrDefault(s => s.Assignmentid == a.Assignmentid
+                    && s.Studentid == studentId);
+                    
+                    earnedPoints += submission.Score ?? 0;
+                }
+
+                if (possiblePoints == 0)
+                    continue;
+                
+                double percent = earnedPoints / possiblePoints;
+                
+                weightedTotal += percent * (c.Gradingweight ?? 0);
+                totalWeights += c.Gradingweight ?? 0;
+            }
+            
+            // No graded categories
+            if (totalWeights == 0)
+            {
+                enrollment.Grade = "--";
+                myDbContext.SaveChanges();
+                return;
+            }
+            
+            // Rescale to percentage
+            double finalPercent = weightedTotal *  100.0 / totalWeights;
+
+            string letter;
+            
+            if(finalPercent >= 92) letter = "A";
+            else if (finalPercent >= 90) letter = "A-";
+            else if (finalPercent >= 87) letter = "B+";
+            else if (finalPercent >= 82) letter = "B";
+            else if (finalPercent >= 80) letter = "B-";
+            else if (finalPercent >= 77) letter = "C+";
+            else if (finalPercent >= 72) letter = "C";
+            else if (finalPercent >= 70) letter = "C-";
+            else if (finalPercent >= 67) letter = "D+";
+            else if (finalPercent >= 62) letter = "D";
+            else if (finalPercent >= 60) letter = "D-";
+            else letter = "E";
+            
+            enrollment.Grade = letter;
+            myDbContext.SaveChanges();
+        }
     }
 }
