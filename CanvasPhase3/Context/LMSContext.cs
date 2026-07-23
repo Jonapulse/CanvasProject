@@ -39,10 +39,8 @@ public partial class LMSContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https: //go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        // => optionsBuilder.UseNpgsql("LMS:ConnectionString");
-    {
-    }
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseNpgsql("Host=atr.eng.utah.edu;Username=u0294347;Database=LMS5");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -117,17 +115,17 @@ public partial class LMSContext : DbContext
 
         modelBuilder.Entity<Assignmentsubmission>(entity =>
         {
-            entity.HasKey(e => new { e.Submissiontime, e.Studentid, e.Assignmentid }).HasName("assignmentsubmissions_pkey");
+            entity.HasKey(e => new { e.Studentid, e.Assignmentid }).HasName("assignmentsubmissions_pkey");
 
             entity.ToTable("assignmentsubmissions");
 
-            entity.Property(e => e.Submissiontime)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("submissiontime");
             entity.Property(e => e.Studentid).HasColumnName("studentid");
             entity.Property(e => e.Assignmentid).HasColumnName("assignmentid");
             entity.Property(e => e.Content).HasColumnName("content");
             entity.Property(e => e.Score).HasColumnName("score");
+            entity.Property(e => e.Submissiontime)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("submissiontime");
 
             entity.HasOne(d => d.Assignment).WithMany(p => p.Assignmentsubmissions)
                 .HasPrincipalKey(p => p.Assignmentid)
@@ -183,7 +181,7 @@ public partial class LMSContext : DbContext
             entity.ToTable("courses");
 
             entity.Property(e => e.Catalogid)
-                .HasMaxLength(5)
+                .HasMaxLength(6)
                 .HasColumnName("catalogid");
             entity.Property(e => e.Depid).HasColumnName("depid");
             entity.Property(e => e.Name)
