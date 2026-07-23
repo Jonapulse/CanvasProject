@@ -215,7 +215,7 @@ namespace CanvasPhase3.Controllers
                 Location = location,
                 Starttime = starttime,
                 Endtime = endtime,
-                Profid = instructor.FromDisplayId()
+                Profid = int.Parse(instructor)
             };
             
             myDbContext.Classes.Add(newClass);
