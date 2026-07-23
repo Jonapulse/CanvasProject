@@ -137,13 +137,19 @@ namespace CanvasPhase3.Controllers
         /// <param name="uid">The uid of the student who submitted it</param>
         /// <returns>The submission text</returns>
         public IActionResult GetSubmissionText(string subject, int num, string season, int year, string category, string asgname, string uid)
-        {            
-            string submission = myDbContext.Assignmentsubmissions.Where(a =>
-                a.Studentid == uid.FromDisplayId() &&
-                a.Assignment.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Assignment.Category.Class.Catalog.Number == num &&
-                a.Assignment.Category.Class.Semesterterm == season && a.Assignment.Category.Class.Semesteryear == year &&
-                a.Assignment.Category.Name == category && a.Assignment.Name == asgname).Select(a => a.Content).First().ToString();
-            return Content(submission);
+        {
+            int internalID = uid[0] == 'u' ? uid.FromDisplayId() : int.Parse(uid); //UID comes in as both serial in string format and "u1234567" display ID
+            
+            int assignmentId = myDbContext.Assignments.Where(a =>
+                a.Category.Class.Catalog.Dep.Subjabbrv == subject && a.Category.Class.Catalog.Number == num &&
+                a.Category.Class.Semesterterm == season && a.Category.Class.Semesteryear == year &&
+                a.Category.Name == category && a.Name == asgname).Select(a => a.Assignmentid).First();
+            
+            var submission = myDbContext.Assignmentsubmissions.Where(a =>
+                    a.Studentid == internalID && a.Assignmentid == assignmentId).Select(a => a.Content)
+                .FirstOrDefault();
+            
+            return Content(submission ?? "");
         }
 
 

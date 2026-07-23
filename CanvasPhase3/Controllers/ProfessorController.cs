@@ -10,6 +10,7 @@ using CanvasPhase3.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -149,7 +150,7 @@ namespace CanvasPhase3.Controllers
         public IActionResult GetAssignmentsInCategory(string subject, int num, string season, int year, string category)
         {
             var assignments = myDbContext.Assignments.Where(a =>
-                a.Category.Name == category && a.Category.Class.Semesterterm == season && 
+                (category == null || a.Category.Name == category) && a.Category.Class.Semesterterm == season && 
                 a.Category.Class.Semesteryear == year && a.Category.Class.Catalog.Number == num && 
                 a.Category.Class.Catalog.Dep != null && a.Category.Class.Catalog.Dep.Subjabbrv == subject).Select(a => new
             {
@@ -343,6 +344,8 @@ namespace CanvasPhase3.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
         {
+            int internalID = int.Parse(uid); //UID comes in as serial in string format (rather than expected "u1234567" display ID
+            
             //Find the assignment
             var assignment = myDbContext.Assignments.FirstOrDefault(c =>
                 c.Category.Class.Catalog.Dep.Subjabbrv == subject && c.Category.Class.Catalog.Number == num && 
@@ -355,8 +358,9 @@ namespace CanvasPhase3.Controllers
             }
             
             var submission = myDbContext.Assignmentsubmissions.Where(c =>
-                c.Studentid == uid.FromDisplayId() && c.Assignmentid == assignment.Assignmentid)
-                .OrderByDescending(c => c.Submissiontime).FirstOrDefault();
+                c.Studentid == internalID && c.Assignmentid == assignment.Assignmentid)
+                .Include(aSub => aSub.Assignment).ThenInclude(a => a.Category)
+                .FirstOrDefault();
             
             if (submission == null)
             {
@@ -369,7 +373,7 @@ namespace CanvasPhase3.Controllers
                 int entriesWritten = myDbContext.SaveChanges();
                 
                 // Calculate the student's letter grade
-                CalcLetterGrade(assignment.Category.Classid, submission.Studentid);
+                CalcLetterGrade(submission.Assignment.Category.Classid, submission.Studentid);
                 
                 return Json(new { success = entriesWritten > 0 });
             }
@@ -437,7 +441,7 @@ namespace CanvasPhase3.Controllers
                     var submission = myDbContext.Assignmentsubmissions.FirstOrDefault(s => s.Assignmentid == a.Assignmentid
                     && s.Studentid == studentId);
                     
-                    earnedPoints += submission.Score ?? 0;
+                    earnedPoints += submission?.Score ?? 0;
                 }
 
                 if (possiblePoints == 0)
