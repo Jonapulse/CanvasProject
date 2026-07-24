@@ -368,7 +368,7 @@ namespace CanvasPhase3.Controllers
             }
             else
             {
-                submission.Score = score;
+                submission.Score = Math.Clamp(score, 0, assignment.Maxscore ?? 0);
                 myDbContext.Assignmentsubmissions.Update(submission);
                 int entriesWritten = myDbContext.SaveChanges();
                 
